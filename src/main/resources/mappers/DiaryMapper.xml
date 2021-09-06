@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.flower.ourdiary.repository.DiaryRepository">
+    <resultMap id="resultDiaryList" type="Diary">
+        <id property="seq" column="seq"/>
+        <result property="userSeq" column="user_seq"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="likeCount" column="like_count"/>
+        <result property="wantedDt" column="wantedDt"/>
+        <result property="createdAt" column="createdAt"/>
+        <result property="updatedAt" column="updatedAt"/>
+
+        <result property="isLike" column="is_like"/>
+        <association property="user" javaType="User">
+            <id property="seq" column="user_seq"/>
+            <result property="nick" column="user_nick"/>
+            <result property="name" column="user_name"/>
+        </association>
+    </resultMap>
+
+    <resultMap id="resultDiary" type="Diary">
+        <id property="seq" column="seq"/>
+        <result property="userSeq" column="user_seq"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="likeCount" column="like_count"/>
+        <result property="wantedDt" column="wantedDt"/>
+        <result property="createdAt" column="createdAt"/>
+        <result property="updatedAt" column="updatedAt"/>
+
+        <result property="isLike" column="is_like"/>
+        <result property="isForbidden" column="is_forbidden"/>
+        <association property="user" javaType="User">
+            <id property="seq" column="user_seq"/>
+            <result property="nick" column="user_nick"/>
+            <result property="name" column="user_name"/>
+        </association>
+        <collection property="friendList" ofType="User">
+            <id property="seq" column="friend_seq"/>
+            <result property="nick" column="friend_nick"/>
+            <result property="name" column="friend_name"/>
+        </collection>
+        <collection property="groupList" ofType="Group">
+            <id property="seq" column="group_seq"/>
+            <result property="nick" column="group_nick"/>
+            <result property="name" column="group_name"/>
+        </collection>
+        <collection property="pictureList" ofType="DiaryPicture">
+            <id property="seq" column="picture_seq" />
+            <result property="diarySeq" column="picture_diary_seq"/>
+            <result property="path" column="picture_path" />
+            <result property="turn" column="picture_turn" />
+        </collection>
+        <collection property="placeList" ofType="DiaryPlace">
+            <id property="seq" column="place_seq" />
+            <result property="diarySeq" column="place_diary_seq"/>
+            <result property="name" column="place_name"/>
+            <result property="turn" column="place_turn" />
+        </collection>
+    </resultMap>
+
+    <select id="findDiaryList" resultMap="resultDiaryList">
+        SELECT DISTINCT d.seq, d.title, d.content, d.like_count, d.wanted_dt, d.created_at, d.updated_at,
+            u.seq user_seq, u.nick user_nick, u.name user_name,
+            CASE WHEN dl.seq is null THEN 0 ELSE 1 END is_like
+        FROM diary d
+        INNER JOIN user u ON d.user_seq = u.seq
+        INNER JOIN (
+            <if test="filterType == 'ALL' or filterType == 'MY'">
+            (SELECT d2.seq
+            FROM diary d2
+            WHERE d2.user_seq = #{userSeq}
+            <if test="prevLastDiarySeq != null">
+                AND d2.seq &lt; #{prevLastDiarySeq}
+            </if>
+            ORDER BY d2.seq DESC
+            LIMIT #{limitSize})
+            </if>
+
+            <if test="filterType == 'ALL'">
+            UNION ALL
+            </if>
+
+            <if test="filterType == 'ALL' or filterType == 'FRIEND'">
+            (SELECT dft.diary_seq
+            FROM diary_friend_tag dft
+            WHERE dft.friend_seq = #{userSeq}
+            <if test="prevLastDiarySeq != null">
+                AND dft.diary_seq &lt; #{prevLastDiarySeq}
+            </if>
+            ORDER BY dft.diary_seq DESC
+            LIMIT #{limitSize})
+            </if>
+
+            <if test="filterType == 'ALL'">
+            UNION ALL
+            </if>
+
+            <if test="filterType == 'ALL' or filterType == 'GROUP'">
+            (SELECT dgt.diary_seq
+            FROM diary_group_tag dgt
+            INNER JOIN group_member gm ON dgt.group_seq = gm.group_seq AND gm.user_seq = #{userSeq}
+            <where>
+                <if test="prevLastDiarySeq != null">
+                    AND dgt.diary_seq &lt; #{prevLastDiarySeq}
+                </if>
+            </where>
+            ORDER BY dgt.diary_seq DESC
+            LIMIT #{limitSize})
+            </if>
+        ) dd ON d.seq = dd.seq
+        LEFT OUTER JOIN diary_like dl ON dl.diary_seq = d.seq AND dl.user_seq = #{userSeq}
+        WHERE d.state = 0
+        ORDER BY d.seq DESC
+        LIMIT #{limitSize}
+    </select>
+
+    <select id="findDiaryBySeq" resultMap="resultDiary">
+        SELECT d.seq, d.title, d.content, d.like_count, d.wanted_dt, d.created_at, d.updated_at,
+            u.seq user_seq, u.nick user_nick, u.name user_name,
+            dft.seq friend_seq, dft.nick friend_nick, dft.name friend_name,
+            dgt.seq group_seq, dgt.nick group_nick, dgt.name group_name,
+            dpi.seq picture_seq, dpi.diary_seq picture_diary_seq, dpi.path picture_path, dpi.turn picture_turn,
+            dpl.seq place_seq, dpl.diary_seq place_diary_seq, dpl.name place_name,dpl.turn place_turn,
+            CASE WHEN dl.seq is null THEN 0 ELSE 1 END is_like,
+            ( SELECT CASE WHEN count(*) = 0 THEN 1 ELSE 0 END
+              FROM ( SELECT d2.seq FROM diary d2 WHERE d2.seq = #{seq} AND d2.user_seq = #{userSeq}
+              UNION ALL SELECT dft2.diary_seq FROM diary_friend_tag dft2 WHERE dft2.diary_seq = #{seq} AND dft2.friend_seq = #{userSeq}
+              UNION ALL SELECT dgt2.diary_seq FROM diary_group_tag dgt2 INNER JOIN group_member gm ON dgt2.group_seq = gm.group_seq AND gm.user_seq = #{userSeq} WHERE dgt2.diary_seq = #{seq} ) f
+            ) is_forbidden
+        FROM diary d
+        INNER JOIN user u ON d.user_seq = u.seq
+        LEFT OUTER JOIN (
+            SELECT dft1.diary_seq, u.seq, u.nick, u.name
+            FROM diary_friend_tag dft1
+            INNER JOIN user u ON dft1.friend_seq = u.seq
+        ) dft ON dft.diary_seq = d.seq
+        LEFT OUTER JOIN (
+            SELECT dgt1.diary_seq, g.seq, g.nick, g.name
+            FROM diary_group_tag dgt1
+            INNER JOIN `group` g ON dgt1.group_seq = g.seq
+        ) dgt ON dgt.diary_seq = d.seq
+        LEFT OUTER JOIN diary_picture dpi ON dpi.diary_seq = d.seq
+        LEFT OUTER JOIN diary_place dpl ON dpl.diary_seq = d.seq
+        LEFT OUTER JOIN diary_like dl ON dl.diary_seq = d.seq AND dl.user_seq = #{userSeq}
+        WHERE d.seq = #{seq}
+        AND d.state = 0
+    </select>
+
+    <insert id="insertDiary" useGeneratedKeys="true" keyProperty="seq">
+        INSERT INTO diary ( user_seq, title, content, wanted_dt)
+        VALUES ( #{userSeq}, #{title}, #{content}, #{wantedDt} )
+    </insert>
+
+    <update id="updateDiaryStateBySeq">
+        UPDATE diary
+        SET state = #{state}
+        WHERE seq = #{seq}
+        AND user_seq = #{userSeq}
+    </update>
+
+    <insert id="insertDiaryFriendTag" >
+        INSERT INTO diary_friend_tag ( diary_seq, friend_seq )
+        VALUES
+        <foreach item="friendSeq" collection="friendSeqList" separator=",">
+            (#{diarySeq}, #{friendSeq})
+        </foreach>
+    </insert>
+
+    <insert id="insertDiaryGroupTag" >
+        INSERT INTO diary_group_tag ( diary_seq, group_seq )
+        VALUES
+        <foreach item="groupSeq" collection="groupSeqList" separator=",">
+            (#{diarySeq}, #{groupSeq})
+        </foreach>
+    </insert>
+
+    <insert id="insertDiaryPlace" >
+        INSERT INTO diary_place ( diary_seq, name, turn )
+        VALUES
+        <foreach item="place" collection="placeList" separator=",">
+            (#{diarySeq}, #{place.name}, #{place.turn})
+        </foreach>
+    </insert>
+
+    <insert id="insertDiaryPicture">
+        INSERT INTO diary_picture ( diary_seq, path, turn )
+        VALUES
+        <foreach item="picture" collection="pictureList" separator=",">
+            (#{diarySeq}, #{picture.path}, #{picture.turn})
+        </foreach>
+    </insert>
+
+    <update id="updateDiary">
+        UPDATE diary
+        <set>
+            <if test="title != null">
+                ,title = #{title}
+            </if>
+            <if test="content != null">
+                ,content = #{content}
+            </if>
+            <if test="wantedDt != null">
+                ,wanted_dt = #{wantedDt}
+            </if>
+        </set>
+        WHERE seq = #{seq}
+    </update>
+
+    <update id="updateDiaryPlaceTurn">
+        UPDATE diary_place
+        SET turn = #{turn}
+        WHERE seq = #{seq}
+    </update>
+
+    <update id="updateDiaryPictureTurn">
+        UPDATE diary_picture
+        SET turn = #{turn}
+        WHERE seq = #{seq}
+    </update>
+
+    <update id="updateDiaryLikeCount">
+        UPDATE diary
+        SET like_count = like_count + #{amount}
+        WHERE seq = #{seq}
+    </update>
+
+    <insert id="insertDiaryLike">
+        INSERT INTO diary_like ( diary_seq, user_seq )
+        VALUES ( #{diarySeq}, #{userSeq} )
+    </insert>
+
+    <delete id="deleteDiaryLike">
+        DELETE FROM diary_like
+        WHERE diary_seq = #{diarySeq} AND user_seq = #{userSeq}
+    </delete>
+
+    <delete id="deleteDiaryFriendTag">
+        DELETE FROM diary_friend_tag
+        WHERE diary_seq = #{diarySeq}
+        AND friend_seq IN (
+        <foreach item="friendSeq" collection="friendSeqList" separator=",">
+            #{friendSeq}
+        </foreach>)
+    </delete>
+
+    <delete id="deleteDiaryGroupTag">
+        DELETE GROM diary_group_tag ( diary_seq, group_seq )
+        WHERE diary_seq = #{diarySeq}
+        AND group_seq IN (
+        <foreach item="groupSeq" collection="groupSeqList" separator=",">
+            #{groupSeq}
+        </foreach>)
+    </delete>
+
+    <delete id="deleteDiaryPlace">
+        DELETE FROM diary_place
+        WHERE seq IN (
+        <foreach item="place" collection="placeList" separator=",">
+            #{place.seq}
+        </foreach>)
+    </delete>
+
+    <delete id="deleteDiaryPicture">
+        DELETE FROM diary_picture
+        WHERE seq IN (
+        <foreach item="picture" collection="pictureList" separator=",">
+            #{picture.seq}
+        </foreach>)
+    </delete>
+
+</mapper>

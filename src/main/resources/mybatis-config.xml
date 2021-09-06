@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+    <settings>
+        <setting name="mapUnderscoreToCamelCase" value="true"/>
+    </settings>
+
+    <typeAliases>
+        <package name="com.flower.ourdiary.domain.entity"/>
+    </typeAliases>
+    
+    <typeHandlers>
+        <typeHandler handler="com.flower.ourdiary.domain.mappedenum.UserAuthTypeHandler"/>
+        <typeHandler handler="com.flower.ourdiary.domain.mappedenum.EmailAuthTypeHandler"/>
+        <typeHandler handler="com.flower.ourdiary.domain.mappedenum.FriendRequestStateTypeHandler"/>
+        <typeHandler handler="com.flower.ourdiary.domain.mappedenum.DiaryContentTypeHandler"/>
+        <typeHandler handler="com.flower.ourdiary.domain.mappedenum.DiaryStateTypeHandler"/>
+    </typeHandlers>
+</configuration>

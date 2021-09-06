@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.flower.ourdiary.repository.UserRepository">
+
+    <insert id="insertUser" useGeneratedKeys="true" keyProperty="seq">
+        INSERT INTO user (
+            <if test="name != null">name</if>
+        )
+        VALUES (
+            <if test="name != null">#{name}</if>
+        )
+    </insert>
+
+    <select id="findUsersByNameOrNick" resultType="User">
+        SELECT u.seq, u.name, u.nick,
+            CASE WHEN f.friend_seq IS NULL THEN 0 ELSE 1 END as is_friend
+        FROM user u
+        LEFT OUTER JOIN friend f ON u.seq = f.friend_seq AND f.user_seq = #{userSeq}
+        WHERE u.name LIKE concat('%',#{name},'%')
+            OR u.nick LIKE concat('%',#{nick},'%')
+        ORDER BY u.nick
+        LIMIT #{limitStart} , #{limitCount}
+    </select>
+
+    <select id="findUserBySeq" resultType="User">
+        SELECT seq, email, name, nick, created_at
+        FROM user
+        WHERE seq = #{seq}
+    </select>
+
+    <update id="updateUser">
+        UPDATE user
+        SET name = #{name}
+        WHERE seq = #{seq}
+    </update>
+
+    <update id="updateUserNick">
+        UPDATE user
+        SET nick = #{nick}
+        WHERE seq = #{seq}
+    </update>
+
+    <delete id="deleteUser">
+        DELETE FROM user
+        WHERE seq = #{seq}
+    </delete>
+
+    <insert id="upsertUserFcm">
+        INSERT INTO user_fcm(user_seq, token)
+        VALUES (#{userSeq}, #{token})
+        ON DUPLICATE KEY UPDATE
+            token = #{token}
+    </insert>
+
+</mapper>

@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.flower.ourdiary.repository.GroupRepository">
+
+    <resultMap id="resultGroup" type="Group">
+        <id property="seq" column="seq" />
+        <result property="nick" column="nick" />
+        <result property="name" column="name" />
+        <result property="kingUserSeq" column="king_user_seq" />
+        <result property="userCount" column="user_count" />
+        <result property="createdAt" column="created_at" />
+        <association property="kingUser" javaType="User">
+            <id property="seq" column="user_seq"/>
+            <result property="nick" column="user_nick"/>
+            <result property="name" column="user_name"/>
+        </association>
+    </resultMap>
+
+    <resultMap id="resultGroupMember" type="GroupMember">
+        <id property="seq" column="seq" />
+        <result property="groupSeq" column="group_seq" />
+        <result property="userSeq" column="user_seq" />
+        <result property="createdAt" column="created_at" />
+        <association property="user" javaType="User">
+            <id property="seq" column="user_seq"/>
+            <result property="nick" column="user_nick"/>
+            <result property="name" column="user_name"/>
+        </association>
+    </resultMap>
+
+    <select id="findGroupList" resultMap="resultGroup">
+        SELECT g.seq, g.nick, g.name, g.king_user_seq, g.user_count, g.created_at,
+          u.seq user_seq, u.nick user_nick, u.name user_name
+        FROM (
+            SELECT gg.*
+            FROM `group` gg
+            <where>
+                <if test="prevLastSeq != null"> AND gg.seq &lt; #{prevLastSeq} </if>
+                <if test="name != null"> AND gg.name LIKE concat('%',#{name},'%') </if>
+                <if test="nick != null"> AND gg.nick LIKE concat('%',#{nick},'%') </if>
+            </where>
+        ) g
+        INNER JOIN user u ON g.king_user_seq = u.seq
+        INNER JOIN `group_member` gm ON g.seq = gm.group_seq
+        WHERE u.seq = #{userSeq}
+        OR gm.user_seq = #{userSeq}
+        ORDER BY g.seq DESC
+        LIMIT #{limitSize}
+    </select>
+
+    <select id="findGroup" resultMap="resultGroup">
+        SELECT g.seq, g.nick, g.name, g.king_user_seq, g.user_count, g.created_at,
+          u.seq user_seq, u.nick user_nick, u.name user_name
+        FROM `group` g
+        INNER JOIN user u ON g.king_user_seq = u.seq
+        WHERE g.seq = #{seq}
+    </select>
+
+    <select id="findGroupMemberList" resultMap="resultGroupMember">
+        SELECT gm.seq, gm.created_at,
+            u.seq user_seq, u.nick user_nick, u.name user_name
+        FROM group_member gm
+        INNER JOIN user u ON gm.user_seq = u.seq
+        <if test="name != null"> AND u.name LIKE concat('%',#{name},'%') </if>
+        <if test="nick != null"> AND u.nick LIKE concat('%',#{nick},'%') </if>
+        WHERE gm.group_seq = #{groupSeq}
+        <if test="prevLastSeq != null">
+            AND gm.seq &lt; #{prevLastSeq}
+        </if>
+        ORDER BY gm.seq DESC
+        LIMIT #{limitSize}
+    </select>
+
+    <select id="findGroupMemberBySeq" resultMap="resultGroupMember">
+        SELECT gm.seq, gm.group_seq, gm.created_at,
+               u.seq user_seq, u.nick user_nick, u.name user_name
+        FROM group_member gm
+        INNER JOIN user u ON gm.user_seq = u.seq
+        WHERE gm.seq = #{seq}
+    </select>
+
+    <select id="findGroupMemberByGroupSeqAndUserSeq" resultMap="resultGroupMember">
+        SELECT gm.seq, gm.group_seq, gm.created_at,
+          u.seq user_seq, u.nick user_nick, u.name user_name
+        FROM group_member gm
+        INNER JOIN user u ON gm.user_seq = u.seq
+        WHERE gm.group_seq = #{groupSeq}
+        AND gm.user_seq = #{userSeq}
+    </select>
+
+    <insert id="insertGroup" useGeneratedKeys="true" keyProperty="seq" keyColumn="seq">
+        INSERT INTO `group`(nick, name, king_user_seq, user_count)
+        VALUES (#{nick}, #{name}, #{userSeq}, 0)
+    </insert>
+
+    <insert id="insertGroupMember">
+        INSERT INTO group_member(group_seq, user_seq)
+        VALUES
+        <foreach collection="memberSeqList" item="memberSeq" separator=",">
+            (#{groupSeq}, #{memberSeq})
+        </foreach>
+    </insert>
+
+    <update id="updateGroup">
+        UPDATE `group`
+        <set>
+            <if test="nick != null">,nick = #{nick}</if>
+            <if test="name != null">,name = #{name}</if>
+            <if test="king_user_seq != null">,king_user_seq = #{kingUserSeq}</if>
+        </set>
+        WHERE seq = #{seq}
+    </update>
+
+    <update id="updateGroupUserCount">
+        UPDATE `group`
+        SET user_count = user_count + #{amount}
+        WHERE seq = #{seq}
+    </update>
+
+    <delete id="deleteGroupMember">
+        DELETE FROM group_member
+        WHERE seq = #{seq}
+    </delete>
+</mapper>

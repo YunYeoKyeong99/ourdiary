@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.flower.ourdiary.repository.FriendRepository">
+
+    <select id="findFriendsByNameOrNick" resultType="User">
+        SELECT u.seq, u.name, u.nick
+        FROM user u
+        INNER JOIN friend f
+        ON u.seq = f.user_seq AND f.friend_seq = #{userSeq}
+        <if test="name != null and nick != null">
+        WHERE u.name LIKE concat('%',#{name},'%')
+        OR u.nick LIKE concat('%',#{nick},'%')
+        </if>
+        ORDER BY u.nick
+        LIMIT #{limitStart} , #{limitCount}
+    </select>
+
+    <select id="findFriendByUserSeqAndFriendSeq" resultType="Friend">
+        SELECT seq, user_seq, friend_seq
+        FROM friend
+        WHERE user_seq = #{userSeq}
+            AND friend_seq = #{friendSeq}
+    </select>
+
+    <insert id="insertFriend">
+        INSERT INTO friend(user_seq, friend_seq)
+        VALUES (#{userSeq}, #{friendSeq})
+    </insert>
+
+    <delete id="deleteFriendByUserSeqAndFriendSeq">
+        DELETE FROM friend
+        WHERE user_seq = #{userSeq}
+        AND friend_seq = #{friendSeq}
+    </delete>
+
+</mapper>

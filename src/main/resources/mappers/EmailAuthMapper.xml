@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.flower.ourdiary.repository.EmailAuthRepository">
+
+    <insert id="insertEmailAuth" useGeneratedKeys="true" keyProperty="seq">
+        INSERT INTO email_auth(type, user_seq, token, id, pw)
+        VALUES(
+               #{type},
+               #{userSeq},
+               #{token},
+               #{id},
+               #{pw}
+        )
+    </insert>
+
+    <select id="findEmailAuthByToken" resultType="EmailAuth">
+        SELECT seq, type, user_seq, id, pw, used_dt, created_at
+        FROM email_auth
+        WHERE token = #{token}
+    </select>
+
+    <update id="updateEmailAuthUsedDtBySeq">
+        UPDATE email_auth
+        SET used_dt = now()
+        WHERE seq = #{seq}
+        AND used_dt is null
+    </update>
+
+    <update id="updateEmailAuthUsedDtByTypeAndId">
+        UPDATE email_auth
+        SET used_dt = now()
+        WHERE type = #{type}
+        AND id = #{id}
+        AND used_dt is null
+    </update>
+
+</mapper>

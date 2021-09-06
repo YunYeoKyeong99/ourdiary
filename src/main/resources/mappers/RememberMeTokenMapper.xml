@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.flower.ourdiary.repository.RememberMeTokenRepository">
+
+    <insert id="insertRememberMeToken">
+        INSERT INTO remember_me_token (user_seq, series, token, last_used)
+        VALUES (#{userSeq}, #{series}, #{token}, #{lastUsed})
+    </insert>
+
+    <select id="findRememberMeTokenBySeries" resultType="RememberMeToken">
+        SELECT user_seq, series, token, last_used
+        FROM remember_me_token
+        WHERE series = #{series}
+    </select>
+
+    <update id="updateRememberMeToken">
+        UPDATE remember_me_token
+        SET token = #{token}, last_used = now()
+        WHERE series = #{series}
+    </update>
+
+    <delete id="deleteRememberMeToken">
+        DELETE FROM remember_me_token
+        WHERE user_seq = #{userSeq}
+    </delete>
+
+</mapper>

@@ -1,0 +1,40 @@
+spring:
+  profiles: default
+  datasource:
+    platform: mysql
+    driverClassName: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://database-1.cnruykmqvqmu.ap-northeast-2.rds.amazonaws.com:3306/ourdiary?autoReconnect=true&useSSL=false
+    username: ourdiarymember
+    password: password
+server:
+  domain: www.ourdiary.site:8081
+
+---
+spring:
+  profiles: production
+  datasource:
+    platform: mysql
+    driverClassName: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://database-1.cnruykmqvqmu.ap-northeast-2.rds.amazonaws.com:3306/ourdiary?autoReconnect=true&useSSL=false
+    username: ourdiarymember
+    password: password
+  resources:
+    add-mappings: false
+server:
+  domain: www.ourdiary.site:8081
+
+---
+spring:
+  profiles: local
+  datasource:
+    platform: h2
+    driverClassName: org.h2.Driver
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    data: classpath:schema-h2.sql,classpath:data-h2.sql
+  h2:
+    console:
+      enabled: true
+server:
+  domain: localhost:8081

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <appender name="Console"
+              class="ch.qos.logback.core.ConsoleAppender">
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <Pattern>
+                %black(%d{ISO8601}) %highlight(%-5level) [%blue(%t)] %yellow(%C{1.}): %msg%n%throwable
+            </Pattern>
+        </layout>
+    </appender>
+
+    <appender name="SlackWebhook" class="com.flower.ourdiary.log.SlackWebhookAppender">
+        <webhookUrl>https://hooks.slack.com/services/1234/1234/1234</webhookUrl>
+        <channel>#ourdiary-server</channel>
+        <username>ourdiary-server-bot</username>
+    </appender>
+
+    <appender name="AsyncSlackWebhook" class="ch.qos.logback.classic.AsyncAppender">
+        <param name="includeCallerData" value="false" />    <!-- extracting thread name, MDC .... -->
+        <param name="queueSize" value="256" />              <!-- default 256 -->
+        <param name="neverBlock" value="true" />            <!-- if cannot publish log then just drop the message and will not block your application -->
+        <param name="maxFlushTime" value="60000" />         <!-- maximum queue flush timeout in milliseconds -->
+
+        <appender-ref ref="SlackWebhook" />
+    </appender>
+
+    <springProfile name="local">
+        <root level="INFO">
+            <appender-ref ref="Console" />
+        </root>
+    </springProfile>
+
+    <springProfile name="default">
+        <root level="WARN">
+            <appender-ref ref="Console" />
+        </root>
+        <logger name="com.flower.ourdiary.log.ApiLogFilter" level="INFO">
+            <appender-ref ref="AsyncSlackWebhook" />
+        </logger>
+        <logger name="com.flower.ourdiary.log.RestLogInterceptor" level="INFO">
+            <appender-ref ref="AsyncSlackWebhook" />
+        </logger>
+    </springProfile>
+
+    <springProfile name="production">
+        <root level="WARN">
+            <appender-ref ref="Console" />
+        </root>
+        <logger name="com.flower.ourdiary.log.ApiLogFilter" level="INFO">
+            <appender-ref ref="AsyncSlackWebhook" />
+        </logger>
+        <logger name="com.flower.ourdiary.log.RestLogInterceptor" level="INFO">
+            <appender-ref ref="AsyncSlackWebhook" />
+        </logger>
+    </springProfile>
+
+</configuration>
